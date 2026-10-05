@@ -28,37 +28,176 @@ function saidSize(bytes) {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/** A short label for what kind of file this is, from its name: shown, never trusted. */
+function kindOf(name) {
+  const dot = String(name ?? '').lastIndexOf('.');
+  const ext = dot > 0 ? String(name).slice(dot + 1).toLowerCase() : '';
+  return ext && ext.length <= 4 ? ext.toUpperCase() : 'FILE';
+}
+
+/**
+ * **One stylesheet, in the page, with the colours as variables.** Every colour is named
+ * once at the top and again for dark mode, so changing the look is changing a handful of
+ * lines rather than hunting through rules. No framework: everything here is CSS a browser
+ * has understood for years.
+ */
 const STYLE = `
-  :root { color-scheme: light dark; }
-  body { font: 16px/1.5 system-ui, sans-serif; margin: 0; padding: 2rem 1rem; }
-  main { max-width: 52rem; margin: 0 auto; }
-  h1 { font-size: 1.5rem; margin: 0 0 .25rem; }
-  p.lead { margin: 0 0 2rem; opacity: .75; }
-  form.upload { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center;
-                padding: 1rem; border: 1px solid currentColor; border-radius: .5rem;
-                margin-bottom: 2rem; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; padding: .5rem .25rem; border-bottom: 1px solid; }
-  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; opacity: .7; }
-  td.right, th.right { text-align: right; }
-  .trouble { padding: .75rem 1rem; border: 1px solid; border-radius: .5rem;
-             margin-bottom: 1.5rem; }
-  .empty { opacity: .7; padding: 2rem 0; }
-  button, input[type=submit] { font: inherit; padding: .4rem .8rem; cursor: pointer; }
+  :root {
+    color-scheme: light dark;
+    --bg: #f5f7fb; --card: #ffffff; --text: #0f172a; --muted: #64748b;
+    --line: #e2e8f0; --accent: #4f46e5; --accent-soft: #eef2ff; --accent-text: #ffffff;
+    --danger: #dc2626; --danger-soft: #fef2f2; --ok: #059669;
+    --shadow: 0 1px 2px rgb(15 23 42 / .06), 0 8px 24px rgb(15 23 42 / .06);
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b1120; --card: #111827; --text: #e5e7eb; --muted: #94a3b8;
+      --line: #1f2937; --accent: #818cf8; --accent-soft: #1e1b4b; --accent-text: #0b1120;
+      --danger: #f87171; --danger-soft: #2a1215; --ok: #34d399;
+      --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 8px 24px rgb(0 0 0 / .3);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 56rem; margin: 0 auto; padding: 3rem 1rem 4rem; }
+
+  header { display: flex; gap: 1rem; align-items: center; margin-bottom: 2rem; }
+  .logo {
+    width: 3rem; height: 3rem; border-radius: 12px; flex: none; display: grid;
+    place-items: center; background: var(--accent); color: var(--accent-text);
+    box-shadow: var(--shadow);
+  }
+  h1 { font-size: 1.75rem; line-height: 1.2; margin: 0; letter-spacing: -.01em; }
+  .lead { margin: .25rem 0 0; color: var(--muted); }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 1.5rem; margin-bottom: 1.5rem;
+  }
+  .card h2 {
+    font-size: 1rem; margin: 0 0 1rem; display: flex; justify-content: space-between;
+    align-items: baseline;
+  }
+  .count { font-weight: 500; color: var(--muted); font-size: .9rem; }
+
+  /* The drop zone is the file input itself, stretched over the box and made invisible, so
+     clicking anywhere or dropping a file onto it is the browser's own behaviour. */
+  .drop {
+    position: relative; border: 2px dashed var(--line); border-radius: 12px;
+    padding: 2rem 1rem; text-align: center; transition: border-color .15s, background .15s;
+  }
+  .drop:hover, .drop:focus-within, .drop.over {
+    border-color: var(--accent); background: var(--accent-soft);
+  }
+  .drop input[type=file] {
+    position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;
+  }
+  .drop svg { color: var(--accent); }
+  .drop strong { display: block; margin-top: .5rem; }
+  .drop .hint { color: var(--muted); font-size: .9rem; }
+  .drop .chosen { margin-top: .5rem; font-weight: 600; color: var(--ok); min-height: 1.5em; }
+  .actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
+
+  .btn {
+    font: inherit; font-weight: 600; font-size: .95rem; border-radius: 10px;
+    padding: .55rem 1rem; border: 1px solid transparent; cursor: pointer;
+    display: inline-flex; align-items: center; gap: .4rem; text-decoration: none;
+    transition: filter .15s, background .15s;
+  }
+  .btn-primary { background: var(--accent); color: var(--accent-text); }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-ghost { background: transparent; color: var(--text); border-color: var(--line); }
+  .btn-ghost:hover { background: var(--accent-soft); }
+  .btn-danger { background: transparent; color: var(--danger); border-color: var(--line); }
+  .btn-danger:hover { background: var(--danger-soft); }
+  .btn-sm { padding: .35rem .7rem; font-size: .85rem; }
+  .btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  .trouble {
+    padding: .85rem 1rem; border-radius: 10px; margin-bottom: 1.5rem;
+    background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger);
+  }
+
+  ul.files { list-style: none; margin: 0; padding: 0; }
+  ul.files li {
+    display: flex; align-items: center; gap: 1rem; padding: .85rem 0;
+    border-top: 1px solid var(--line);
+  }
+  ul.files li:first-child { border-top: 0; }
+  .badge {
+    flex: none; width: 3rem; height: 3rem; border-radius: 10px; display: grid;
+    place-items: center; font-size: .7rem; font-weight: 700; letter-spacing: .04em;
+    background: var(--accent-soft); color: var(--accent);
+  }
+  .meta { flex: 1; min-width: 0; }
+  .name { font-weight: 600; overflow-wrap: anywhere; color: var(--text); text-decoration: none; }
+  .name:hover { color: var(--accent); }
+  .sub { color: var(--muted); font-size: .85rem; }
+  .row-actions { display: flex; gap: .5rem; flex: none; }
+  .row-actions form { margin: 0; }
+
+  .empty { text-align: center; padding: 2rem 1rem; color: var(--muted); }
+  .empty svg { color: var(--line); }
+
+  .how { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+  .how div { padding: 1rem; border-radius: 12px; background: var(--bg); }
+  .how b { display: block; margin-bottom: .25rem; }
+  .how span { color: var(--muted); font-size: .9rem; }
+  footer { text-align: center; color: var(--muted); font-size: .85rem; margin-top: 2rem; }
+
+  @media (max-width: 40rem) {
+    main { padding-top: 2rem; }
+    .how { grid-template-columns: 1fr; }
+    ul.files li { flex-wrap: wrap; }
+    .row-actions { width: 100%; justify-content: flex-end; }
+  }
+`;
+
+/** Icons drawn inline, so the page needs nothing from anywhere else. */
+const ICON = {
+  cloud: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 1 0-1.4-8.8A6 6 0 1 0 6 17.9"/><path d="M12 12v9"/><path d="m8 16 4-4 4 4"/></svg>',
+  upload: '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>',
+  empty: '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>',
+};
+
+/**
+ * **The one piece of script on the page, and the page works without it.** It says which
+ * file was picked and lights the box up while a file is dragged over it; the form posts
+ * exactly the same either way.
+ */
+const SCRIPT = `
+  const input = document.getElementById('file');
+  const box = input.closest('.drop');
+  const chosen = box.querySelector('.chosen');
+  input.addEventListener('change', () => {
+    chosen.textContent = input.files.length ? input.files[0].name : '';
+  });
+  ['dragenter', 'dragover'].forEach((e) => input.addEventListener(e, () => box.classList.add('over')));
+  ['dragleave', 'drop'].forEach((e) => input.addEventListener(e, () => box.classList.remove('over')));
 `;
 
 export function page(files, trouble = '') {
   const rows = files.map((file) => `
-    <tr>
-      <td><a href="/files/${safe(file.id)}">${safe(file.name)}</a></td>
-      <td class="right">${safe(saidSize(file.size_bytes))}</td>
-      <td>${safe(new Date(file.uploaded_at).toLocaleString('en-GB'))}</td>
-      <td class="right">
-        <form method="post" action="/files/${safe(file.id)}/delete">
-          <button type="submit">Delete</button>
-        </form>
-      </td>
-    </tr>`).join('');
+      <li>
+        <div class="badge" aria-hidden="true">${safe(kindOf(file.name))}</div>
+        <div class="meta">
+          <a class="name" href="/files/${safe(file.id)}">${safe(file.name)}</a>
+          <div class="sub">${safe(saidSize(file.size_bytes))} &middot;
+            ${safe(new Date(file.uploaded_at).toLocaleString('en-GB'))}</div>
+        </div>
+        <div class="row-actions">
+          <a class="btn btn-ghost btn-sm" href="/files/${safe(file.id)}">Download</a>
+          <form method="post" action="/files/${safe(file.id)}/delete">
+            <button type="submit" class="btn btn-danger btn-sm"
+                    aria-label="Delete ${safe(file.name)}">Delete</button>
+          </form>
+        </div>
+      </li>`).join('');
 
   return `<!doctype html>
 <html lang="en">
@@ -70,36 +209,54 @@ export function page(files, trouble = '') {
 </head>
 <body>
   <main>
-    <h1>File uploads</h1>
-    <p class="lead">
-      The file goes to S3. Where it went goes to Postgres. Neither store knows about the
-      other &mdash; this app is what joins them.
-    </p>
+    <header>
+      <div class="logo">${ICON.cloud}</div>
+      <div>
+        <h1>File uploads</h1>
+        <p class="lead">The file goes to S3. Where it went goes to Postgres. Neither store
+          knows about the other &mdash; this app is what joins them.</p>
+      </div>
+    </header>
 
-    ${trouble ? `<p class="trouble">${safe(trouble)}</p>` : ''}
+    ${trouble ? `<p class="trouble" role="alert">${safe(trouble)}</p>` : ''}
 
-    <form class="upload" method="post" action="/upload" enctype="multipart/form-data">
-      <!-- A visible label, because a control named only by its placeholder is a control
-           a screen reader cannot announce. -->
-      <label for="file">Choose a file</label>
-      <input type="file" name="file" id="file" required>
-      <button type="submit">Upload it</button>
-    </form>
+    <section class="card">
+      <h2>Upload a file</h2>
+      <form method="post" action="/upload" enctype="multipart/form-data">
+        <div class="drop">
+          ${ICON.upload}
+          <!-- A visible label, because a control named only by its placeholder is a
+               control a screen reader cannot announce. -->
+          <label for="file"><strong>Drop a file here, or click to choose one</strong></label>
+          <div class="hint">Anything up to 10 MB</div>
+          <div class="chosen" aria-live="polite"></div>
+          <input type="file" name="file" id="file" required>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn btn-primary">Upload it</button>
+        </div>
+      </form>
+    </section>
 
-    ${files.length === 0
-      ? '<p class="empty">Nothing uploaded yet. The table will fill in as you add files.</p>'
-      : `<table>
-      <thead>
-        <tr>
-          <th scope="col">Name</th>
-          <th scope="col" class="right">Size</th>
-          <th scope="col">Uploaded</th>
-          <th scope="col" class="right">&nbsp;</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>`}
+    <section class="card">
+      <h2>Your files <span class="count">${files.length} ${files.length === 1 ? 'file' : 'files'}</span></h2>
+      ${files.length === 0
+        ? `<div class="empty">${ICON.empty}<p>Nothing uploaded yet. Your files will appear here.</p></div>`
+        : `<ul class="files">${rows}</ul>`}
+    </section>
+
+    <section class="card">
+      <h2>How it works</h2>
+      <div class="how">
+        <div><b>1. Your browser</b><span>sends the file to this app as a form post.</span></div>
+        <div><b>2. S3</b><span>keeps the bytes, under a random key nobody can guess.</span></div>
+        <div><b>3. Postgres</b><span>remembers the name, the size and where the bytes went.</span></div>
+      </div>
+    </section>
+
+    <footer>A sample app. Read the code, change it, deploy it again.</footer>
   </main>
+  <script>${SCRIPT}</script>
 </body>
 </html>`;
 }
