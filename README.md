@@ -1,6 +1,6 @@
-# File uploads: S3 for the bytes, Postgres for everything else
+# File uploads in Node.js: S3 for the bytes, Postgres for everything else
 
-A sample app for the [MitsuruTech Learning Platform](https://mitsurutech.co.uk). Upload a
+A Node.js (Express) sample app for the [MitsuruTech Learning Platform](https://mitsurutech.co.uk/learning). Upload a
 file; S3 keeps it; Postgres remembers where it went and what it is called. The table on the
 page comes out of Postgres, and every download comes out of S3.
 
@@ -16,7 +16,7 @@ page.js     the HTML
 ## Deploying it here
 
 Open **Deploy** on the platform, pick this repository, and start a **database** and the
-**cloud stack** alongside it. Everything the app needs is then in its environment already;
+**cloud stack** alongside it ([how deploying from GitHub works](https://mitsurutech.co.uk/help/deploy-app)). Everything the app needs is then in its environment already;
 there is nothing to configure.
 
 | Variable | Set by | What it is |
@@ -92,3 +92,11 @@ Then open <http://localhost:8080>.
 ## Licence
 
 MIT. Fork it, break it, keep the pieces.
+
+## About
+
+Made by [Mitsuru Technologies](https://mitsurutech.co.uk/learning), who build the MitsuruTech
+Learning Platform for teaching programming. The same sample exists in other languages:
+[uploads-java](https://github.com/mitsurutech/uploads-java),
+[uploads-python](https://github.com/mitsurutech/uploads-python) and
+[uploads-go](https://github.com/mitsurutech/uploads-go).
