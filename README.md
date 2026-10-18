@@ -1,10 +1,12 @@
 # File uploads in Node.js: S3 for the bytes, Postgres for everything else
 
+[English](README.md) | [Français](README.fr.md) | [日本語](README.ja.md) | [Español](README.es.md)
+
 A Node.js (Express) sample app for the [MitsuruTech Learning Platform](https://mitsurutech.co.uk/learning). Upload a
 file; S3 keeps it; Postgres remembers where it went and what it is called. The table on the
 page comes out of Postgres, and every download comes out of S3.
 
-It is deliberately small — four routes and three files — so you can read the whole thing
+It is deliberately small, four routes and three files, so you can read the whole thing
 before you change any of it.
 
 ```
@@ -30,7 +32,7 @@ there is nothing to configure.
 ## The three things worth reading
 
 **1. `forcePathStyle: true`, in `store.js`.** This is the setting everybody misses first. By
-default the AWS SDK puts the bucket in the hostname — `uploads.cloud` — and there is no such
+default the AWS SDK puts the bucket in the hostname, `uploads.cloud`, and there is no such
 name on your session's network, so every call fails with a DNS error that says nothing about
 buckets. Path style asks for `http://cloud:4566/uploads/...` instead.
 
@@ -52,8 +54,8 @@ thing that can be orphaned harmlessly go first.
 ## Two safety habits, taken seriously in a sample on purpose
 
 **The S3 key is a uuid, never the filename.** Two people upload `notes.txt` and one must not
-overwrite the other; and a name that came from a browser is not a thing to build a path from
-— `../../etc/passwd` is a perfectly valid filename as far as a form is concerned. The real
+overwrite the other; and a name that came from a browser is not a thing to build a path from:
+`../../etc/passwd` is a perfectly valid filename as far as a form is concerned. The real
 name is a column, which is where it is safe.
 
 **Downloads are always `attachment`, always `application/octet-stream`, always `nosniff`.**
@@ -85,13 +87,13 @@ Then open <http://localhost:8080>.
 
 - Stream a large upload straight to S3 instead of holding it in memory (`store.js` says
   where).
-- Add a download count, in DynamoDB — your cloud stack emulates that too.
+- Add a download count, in DynamoDB: your cloud stack emulates that too.
 - Put the files behind a login, so the table is per person.
 - Show an image preview, using a pre-signed URL rather than proxying the bytes.
 
 ## Licence
 
-MIT. Fork it, break it, keep the pieces.
+This work is licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). You may share it and adapt it for learning and teaching, if you credit Mitsuru Technologies Ltd, do not use it commercially, and share anything you make from it under the same licence. The full text is in the `LICENSE` file.
 
 ## About
 
@@ -100,3 +102,5 @@ Learning Platform for teaching programming. The same sample exists in other lang
 [uploads-java](https://github.com/mitsurutech/uploads-java),
 [uploads-python](https://github.com/mitsurutech/uploads-python) and
 [uploads-go](https://github.com/mitsurutech/uploads-go).
+
+Teaching a class? See [the price](https://mitsurutech.co.uk/pricing) or [create a college account](https://mitsurutech.co.uk/signup).
